@@ -81,11 +81,7 @@ pip install -r requirements.txt
 python seed.py
 ```
 
-### 4. Access
 
-- **Web App:** http://localhost:3000
-- **API Docs:** http://localhost:8000/docs
-- **MinIO Console:** http://localhost:9001 (sugamai / sugamai123)
 
 ### 5. Development
 
@@ -133,7 +129,7 @@ npm install && npx expo start
 - Real-time status tracking with timeline
 - Bank account management with penny drop verification
 
-### 🤖 AI Features (Claude)
+### 🤖 AI Features 
 - OCR bill parsing (Tesseract + Claude vision)
 - Eligibility scoring across 8+ government schemes
 - Coverage grid summaries in 5 languages
