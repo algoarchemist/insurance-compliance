@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "sugamai-mobile",
+    "slug": "sugamai-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "sugamai",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#0c8eeb"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sugamai.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0c8eeb"
+      },
+      "package": "com.sugamai.mobile"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-camera",
+      "expo-image-picker",
+      "expo-secure-store"
+    ]
+  }
+}
