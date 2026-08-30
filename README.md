@@ -180,15 +180,9 @@ docker-compose exec backend python seed.py
 
 This creates 5 sample empanelled hospitals and a demo elder user (**Ramesh Kumar**, Aadhaar `123456789012`) with a PMJAY policy and a private Star Health policy.
 
-### 4. Access
-
-- **Web App:** http://localhost:3001 (redirects to `/en/login`)
-- **API Docs:** http://localhost:8000/docs
-- **MinIO Console:** http://localhost:9001 (sugamai / sugamai123)
-
 Log in with Aadhaar `123456789012` and any 6-digit OTP to use the seeded demo account.
 
-### 5. Development (without Docker)
+### 4. Development (without Docker)
 
 ```bash
 # Backend
@@ -235,7 +229,7 @@ npm install && npx expo start
 - Real-time status tracking with timeline
 - Bank account management with penny drop verification
 
-### 🤖 AI Features (Claude)
+### 🤖 AI Features 
 - OCR bill parsing (Tesseract + Claude vision)
 - Eligibility scoring across 8+ government schemes
 - Coverage grid summaries in 5 languages
