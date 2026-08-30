@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Numeric, String, Text, ForeignKey
+from sqlalchemy import Boolean, Column, DateTime, Numeric, String, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
@@ -77,6 +77,3 @@ class BankAccount(Base):
 
     # Relationships
     user = relationship("User", back_populates="bank_accounts")
-
-
-from sqlalchemy import Boolean

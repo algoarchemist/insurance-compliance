@@ -2,20 +2,105 @@
 
 > Simplifying health insurance for every Indian citizen. 🏥
 
-## Overview
+**Sugamai** is a standards-compliant (NHCX/FHIR R4), elder-friendly, AI-powered health insurance aggregator and compliance-claims platform. It lets citizens manage government and private health policies, find empanelled hospitals, and file, track, and get compliance-checked insurance claims — all from one place.
 
-**Sugamai** is a standards-compliant (NHCX/FHIR R4), elder-friendly, AI-powered health insurance management platform. It helps citizens manage government and private health policies, find empanelled hospitals, file and track claims, and more — all from one place.
+This README walks through every screen in the app with screenshots, then covers architecture, setup, and API reference.
+
+---
+
+## Table of Contents
+
+- [Screenshots — App Walkthrough](#screenshots--app-walkthrough)
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [API Endpoints](#api-endpoints)
+- [Security](#security)
+- [Testing](#testing)
+- [External API Integration](#external-api-integration)
+
+---
+
+## Screenshots — App Walkthrough
+
+All screenshots below were captured from a live local run, logged in as the seeded demo user **Ramesh Kumar** (an elder, SwasthID `SWA2025TEST0001`, 2 policies totalling ₹15L coverage).
+
+### 1. Login — Aadhaar OTP
+
+Login uses Aadhaar-based OTP (SHA-256 hashed, never stored raw). In local/sandbox mode, any 12-digit number is accepted and any 6-digit OTP verifies — no real UIDAI or SMS calls are made.
+
+![Login — enter Aadhaar number](docs/screenshots/01-login-aadhaar.jpg)
+
+### 2. Login — OTP Verification
+
+![Login — enter OTP](docs/screenshots/02-login-otp.jpg)
+
+### 3. Dashboard
+
+Landing screen after login: total coverage across all policies, active policy count, pending claims, quick actions, and recent claims.
+
+![Dashboard](docs/screenshots/03-dashboard.jpg)
+
+### 4. My Policies
+
+Shows all linked policies (government + private), with one-click PMJAY (Ayushman Bharat) eligibility checking that auto-registers the policy if eligible.
+
+![My Policies](docs/screenshots/04-policies.jpg)
+
+### 5. Find Hospitals
+
+Searchable, filterable directory of empanelled hospitals with speciality tags, empanelment type (cashless / reimbursement / both), and per-hospital coverage lookup.
+
+![Find Hospitals](docs/screenshots/05-hospitals.jpg)
+
+### 6. My Claims
+
+All claims for the logged-in user with status badges (draft, submitted, processing, settled, rejected).
+
+![My Claims](docs/screenshots/06-claims-list.jpg)
+
+### 7. File a New Claim
+
+Reimbursement claim intake: select policy, optionally select the treating hospital, admission/discharge dates, and claimed amount.
+
+![File a Claim](docs/screenshots/07-file-claim.jpg)
+
+### 8. Claim Detail — AI Bill Parsing (OCR)
+
+After filing, upload the hospital bill and discharge summary, then run AI-assisted OCR extraction to pull structured line items (room rent, surgery charges, medicines, lab tests, consultations) straight off the bill.
+
+![Claim detail — OCR extracted items](docs/screenshots/08-claim-detail-ocr.jpg)
+
+### 9. Claim Detail — Compliance Gap Check
+
+Before a claim can be submitted to NHCX, the AI compliance engine checks for missing required documents and flags them — this is the core "compliance claim" gate that stops incomplete claims from going out.
+
+![Claim detail — gap check](docs/screenshots/09-claim-detail-gaps.jpg)
+
+### 10. Caregiver
+
+Elders (60+) can invite a family member as a caregiver with read-only oversight and an OTP-gated consent flow for any write actions taken on their behalf.
+
+![Caregiver](docs/screenshots/10-caregiver.jpg)
+
+### 11. Settings
+
+Profile details (SwasthID, ABHA, role) plus accessibility controls — large text mode, high contrast mode, and voice navigation — built for elderly users.
+
+![Settings](docs/screenshots/11-settings.jpg)
+
+---
 
 ## Architecture
 
 | Layer | Technology | Port |
 |-------|-----------|------|
 | **Backend API** | Python 3.11 + FastAPI | 8000 |
-| **Frontend Web** | Next.js 14 + Tailwind CSS | 3000 |
+| **Frontend Web** | Next.js 14 + Tailwind CSS | 3001 (host) → 3000 (container) |
 | **Frontend Mobile** | React Native + Expo | 8081 |
 | **Database** | PostgreSQL 15 | 5432 |
 | **Cache / Queue** | Redis 7 | 6379 |
-| **File Storage** | MinIO (S3-compatible) | 9000 |
+| **File Storage** | MinIO (S3-compatible) | 9000 / 9001 |
 | **Task Queue** | Celery + Redis | — |
 | **Reverse Proxy** | Nginx | 80 |
 
@@ -40,12 +125,24 @@ sugamai/
 ├── frontend-web/
 │   └── src/
 │       ├── app/[locale]/  # Next.js pages with i18n routing
+│       │   ├── login/                    # Aadhaar OTP login
+│       │   └── (dashboard)/
+│       │       ├── dashboard/            # Home
+│       │       ├── policies/             # Policy list + PMJAY check
+│       │       ├── hospitals/            # Hospital finder
+│       │       ├── claims/               # Claims list
+│       │       ├── claims/new/           # File a claim
+│       │       ├── claims/[id]/          # Claim detail — upload, OCR, gap check, submit
+│       │       ├── caregiver/            # Caregiver invite/dashboard
+│       │       └── settings/             # Profile + accessibility
 │       ├── lib/           # API client (Axios + JWT interceptors)
-│       ├── stores/        # Zustand state management
+│       ├── stores/        # Zustand state management (auth persisted to localStorage)
 │       └── messages/      # i18n translations (5 languages)
 ├── frontend-mobile/
 │   ├── app/               # Expo Router screens
 │   └── lib/               # i18n config
+├── docs/
+│   └── screenshots/       # Screenshots used in this README
 ├── infra/
 │   └── nginx.conf         # Reverse proxy config
 └── docker-compose.yml     # Full-stack orchestration
@@ -55,8 +152,8 @@ sugamai/
 
 ### Prerequisites
 - Docker & Docker Compose
-- Node.js 20+ (for frontend dev)
-- Python 3.11+ (for backend dev)
+- Node.js 20+ (for frontend dev outside Docker)
+- Python 3.11+ (for backend dev outside Docker)
 
 ### 1. Clone and configure
 
@@ -65,33 +162,38 @@ cp .env.example .env
 # Edit .env with your API keys (optional — sandbox mocks work by default)
 ```
 
+> **Note:** when running via `docker-compose`, `DATABASE_URL`, `REDIS_URL`, and `MINIO_ENDPOINT` in `.env` must point at the Docker service names (`postgres`, `redis`, `minio`), not `localhost` — the compose file's `frontend-web` service also needs `WATCHPACK_POLLING=true` set for file-watching to work reliably from a Windows host bind mount.
+
 ### 2. Start with Docker Compose
 
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
 
-This starts PostgreSQL, Redis, MinIO, Backend, Celery, and Frontend.
+This starts PostgreSQL, Redis, MinIO, Backend, Celery, Celery Beat, and the Frontend.
 
 ### 3. Seed the database
 
 ```bash
-cd backend
-pip install -r requirements.txt
-python seed.py
+docker-compose exec backend python seed.py
 ```
+
+This creates 5 sample empanelled hospitals and a demo elder user (**Ramesh Kumar**, Aadhaar `123456789012`) with a PMJAY policy and a private Star Health policy.
 
 ### 4. Access
 
-- **Web App:** http://localhost:3000
+- **Web App:** http://localhost:3001 (redirects to `/en/login`)
 - **API Docs:** http://localhost:8000/docs
 - **MinIO Console:** http://localhost:9001 (sugamai / sugamai123)
 
-### 5. Development
+Log in with Aadhaar `123456789012` and any 6-digit OTP to use the seeded demo account.
+
+### 5. Development (without Docker)
 
 ```bash
 # Backend
 cd backend
+pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 
 # Frontend Web
@@ -129,7 +231,7 @@ npm install && npx expo start
 - **Pre-authorization** → NHCX submission → approval polling
 - **Cashless claims** → hospital admission → discharge → final bill
 - **Reimbursement** → bill upload → OCR → AI parsing → submission
-- AI gap detection before submission
+- AI gap detection before submission (the compliance gate)
 - Real-time status tracking with timeline
 - Bank account management with penny drop verification
 
@@ -184,7 +286,7 @@ pytest tests/ -v
 
 ## External API Integration
 
-All integrations have **sandbox mock fallbacks** for local development:
+All integrations have **sandbox mock fallbacks** for local development — the app is fully usable with zero API keys configured:
 
 | Service | API | Sandbox URL |
 |---------|-----|-------------|

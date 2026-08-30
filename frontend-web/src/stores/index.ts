@@ -20,15 +20,26 @@ interface AuthState {
   setUser: (user: User) => void;
 }
 
+function loadStoredUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: false,
-  accessToken: null,
+  user: loadStoredUser(),
+  isAuthenticated: typeof window !== 'undefined' && !!localStorage.getItem('access_token'),
+  accessToken: typeof window !== 'undefined' ? localStorage.getItem('access_token') : null,
 
   login: (user, accessToken, refreshToken) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('access_token', accessToken);
       localStorage.setItem('refresh_token', refreshToken);
+      localStorage.setItem('user', JSON.stringify(user));
     }
     set({ user, isAuthenticated: true, accessToken });
   },
@@ -37,11 +48,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (typeof window !== 'undefined') {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
     }
     set({ user: null, isAuthenticated: false, accessToken: null });
   },
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+    set({ user });
+  },
 }));
 
 
